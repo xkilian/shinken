@@ -698,7 +698,7 @@ function relocate(){
     # when read hat 5 try to use python26
     if [[ "$CODE" == "REDHAT" ]]
     then
-        if [[ "$VERS" == "5" ]]
+        if [[ "$VERS" -eq  5 ]]
         then
             cecho " > Translating python version to python26" green
             for fic in $(find $TARGET | grep "\.py$")
