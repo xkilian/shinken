@@ -375,12 +375,20 @@ function prerequisites(){
                         cecho " > $EPELPKG already installed" green
                     fi
                     ;;
-#                6)
-#                    PACKAGES=$YUMPKGS
-#                    QUERY="rpm -q "
-#                    ;;
                 *)
                     cecho " > Unsupported RedHat/CentOs version" red
+                    exit 2
+                    ;;
+            esac
+            ;;
+        Fedora)
+            case $VERS in
+                16|17)
+                    PACKAGES=$YUMPKGS
+                    QUERY="rpm -q "
+                    ;;
+                *)
+                    cecho " > Unsupported Fedora version" red
                     exit 2
                     ;;
             esac
@@ -446,52 +454,41 @@ function prerequisites(){
                 PYLIBS=$PYLIBSRHEL6
                 ;;
         esac
-        for p in $PYLIBS
-        do
-            module=$(echo $p | awk -F: '{print $1'})
-            import=$(echo $p | awk -F: '{print $2'})
-
-            $PY $myscripts/install.d/tools/checkmodule.py -m $import  >> ${LOGFILE} 2>&1
-            if [[ $? -eq 2 ]]
-            then
-                if [[ $SKIPPREREQUISITES -eq 1 ]]
-                then
-                    cecho " > SKIPPREQUISITES enabled: won't install $p " red
-                else
-                    cecho " > Module $module ($import) not found. Installing..." yellow
-                    $PYEI $module >> ${LOGFILE} 2>&1
-                fi
-            else
-                cecho " > Module $module found." green
-            fi
-
-
-        done
+    elif [[ "$CODE" = "Fedora" ]]
+    then
+        case $VERS in
+            16|17)
+                export PY="python"
+                export PYEI="easy_install"
+                PYLIBS=$PYLIBS
+                ;;
+        esac
     elif [[ "$CODE" == "DEBIAN" ]]
     then
         export PY="python"
         export PYEI="easy_install"
         PYLIBS=$PYLIBSDEB
-        for p in $PYLIBS
-        do
-            module=$(echo $p | awk -F: '{print $1'})
-            import=$(echo $p | awk -F: '{print $2'})
-
-            $PY $myscripts/install.d/tools/checkmodule.py -m $import  >> ${LOGFILE} 2>&1
-            if [[ $? -eq 2 ]]
-            then
-                if [[ $SKIPPREREQUISITES -eq 1 ]]
-                then
-                    cecho " > SKIPPREQUISITES enabled: won't install $p " red
-                else
-                    cecho " > Module $module ($import) not found. Installing..." yellow
-                    $PYEI $module >> ${LOGFILE} 2>&1
-                fi
-            else
-                cecho " > Module $module found." green
-            fi
-        done
     fi
+    for p in $PYLIBS
+    do
+        module=$(echo $p | awk -F: '{print $1'})
+        import=$(echo $p | awk -F: '{print $2'})
+
+        $PY $myscripts/install.d/tools/checkmodule.py -m $import  >> ${LOGFILE} 2>&1
+        if [[ $? -eq 2 ]]
+        then
+            if [[ $SKIPPREREQUISITES -eq 1 ]]
+            then
+                cecho " > SKIPPREQUISITES enabled: won't install $p " red
+            else
+                cecho " > Module $module ($import) not found. Installing..." yellow
+                $PYEI $module >> ${LOGFILE} 2>&1
+            fi
+        else
+            cecho " > Module $module found." green
+        fi
+    done
+
 
     if [[ $MANAGEPYRO -eq 1 ]]
     then
@@ -737,9 +734,7 @@ function relocate(){
     cd $TARGET/bin/default
     cat $TARGET/bin/default/shinken.in | sed  -e 's#LOG\=\(.*\)$#LOG='$TARGET'/var#g' -e 's#RUN\=\(.*\)$#RUN='$TARGET'/var#g' -e  's#ETC\=\(.*\)$#ETC='$ETC'#g' -e  's#VAR\=\(.*\)$#VAR='$TARGET'/var#g' -e  's#BIN\=\(.*\)$#BIN='$TARGET'/bin#g' > $TARGET/bin/default/shinken
     # relocate init file
-    cd $TARGET/bin/init.d
-    mv shinken shinken.in
-    cat shinken.in | sed -e "s#\#export PYTHONPATH=.*#export PYTHONPATH="$TARGET"#g" > $TARGET/bin/init.d/shinken
+    sed -i -e "s#\#export PYTHONPATH=.*#export PYTHONPATH="$TARGET"#g" $TARGET/bin/init.d/shinken
     # relocate skonf.cfg
     cd $ETC
     if [[ $USEPROXY -eq 1 ]]
@@ -1322,8 +1317,7 @@ function install_mongodb(){
                 cecho " > Installing mongodb server" green
                 yum -y install $MONGOPKGS >> ${LOGFILE} 2>&1
                 cecho " > Enable mongodb startup scripts" green
-
-                 enable_rhel_service mongod
+                enable_rhel_service mongod
                 cecho " > Start mongodb server" green
                 /etc/init.d/mongod start >> ${LOGFILE} 2>&1
             else
@@ -2922,6 +2916,23 @@ function install_check_snmp_bandwidth(){
     cp $filename $LIBEXEC/$script
 }
 
+function install_check_netint(){
+    cadre "Install install_check_netint" green
+
+    cd $TMP
+
+    filename="check_netint.pl"
+    cecho " > Downloading check_netint" green
+    wget $WGETPROXY $CHECKNETINT -O ${filename} >> ${LOGFILE} 2>&1
+    if [[ $? -ne 0 ]]
+    then
+        cecho " > Error while downloading $script" red
+        exit 2
+    fi
+
+    cecho " > install check_netint" green
+    install -b -g $SKGROUP -o $SKUSER -m 0755 -t $TARGET/libexec check_netint.pl >> $TMP/shinken.install.log 2>&1
+}
 function install_check_rsync(){
     cadre "Install the rsync check plugin" green
 
