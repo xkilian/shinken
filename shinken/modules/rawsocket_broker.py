@@ -58,6 +58,7 @@ class RawSocket_broker(BaseModule):
         BaseModule.__init__(self, modconf)
         self.host = getattr(modconf, 'host', 'localhost')
         self.port = int(getattr(modconf, 'port', '9514'))
+        self.data = int(getattr(modconf, 'data', 'state'))
         self.tick_limit = int(getattr(modconf, 'tick_limit', '3600'))
         self.buffer = []
         self.ticks = 0
@@ -70,11 +71,13 @@ class RawSocket_broker(BaseModule):
     def manage_log_brok(self, b):
         data = b.data
         line = data['log']
-        if re.match("^\[[0-9]*\] SERVICE*.:", line) or re.match ("^\[[0-9]*\] HOST*.:", line_):
+
+        if self.data == 'state' and (re.match("^\[[0-9]*\] SERVICE*.:", line) or re.match ("^\[[0-9]*\] HOST*.:", line_)):
             # Match logs which MUST be sent to the destination
             self.buffer.append("\n" + data['log'].encode('UTF-8'))
-        else:
-            return
+
+        elif self.data == 'all':
+            self.buffer.append("\n" + data['log'].encode('UTF-8'))
 
 def hook_tick(self, brok):
         """Each second the broker calls the hook_tick function
