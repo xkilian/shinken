@@ -56,7 +56,6 @@ class Graphite_broker(BaseModule):
     def __init__(self, modconf):
         BaseModule.__init__(self, modconf)
         self.host = getattr(modconf, 'host', 'localhost')
-        self.port = int(getattr(modconf, 'port', '2003'))
         self.use_pickle = getattr(modconf, 'use_pickle', '0') == '1'
         if self.use_pickle:
             self.port = int(getattr(modconf, 'port', '2004'))
@@ -174,14 +173,17 @@ class Graphite_broker(BaseModule):
 
         else:
             lines = []
-            # Send a bulk of all metrics at once
+            # Send a bulk of all metrics in perf data log message at once
             for (metric, value) in couples:
                 if value:
                     lines.append("%s.%s %s %d" % (path, metric,
                                                   value, check_time))
             packet = '\n'.join(lines) + '\n'  # Be sure we put \n every where
             logger.debug("[Graphite broker] Launching: %s" % packet)
-            self.con.sendall(packet)
+            try:
+                self.con.sendall(packet)
+            except IOError, err:
+                return
 
     # A host check result brok has just arrived, we UPDATE data info with this
     def manage_host_check_result_brok(self, b):
@@ -219,14 +221,17 @@ class Graphite_broker(BaseModule):
 
         else:
             lines = []
-            # Send a bulk of all metrics at once
+            # Send a bulk of all metrics in perf data log message at once
             for (metric, value) in couples:
                 if value:
                     lines.append("%s.__HOST__.%s %s %d" % (path, metric,
                                                            value, check_time))
             packet = '\n'.join(lines) + '\n'  # Be sure we put \n every where
             logger.debug("[Graphite broker] Launching: %s" % packet)
-            self.con.sendall(packet)
+            try:
+                self.con.sendall(packet)
+            except IOError, err:
+                return
 
     def hook_tick(self, brok):
         """Each second the broker calls the hook_tick function

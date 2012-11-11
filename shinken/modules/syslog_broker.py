@@ -50,13 +50,12 @@ def get_instance(plugin):
     return instance
 
 
-# Class for the Merlindb Broker
-# Get broks and puts them in merlin database
+# Get broks and send them to local syslog
 class Syslog_broker(BaseModule):
     def __init__(self, modconf):
         BaseModule.__init__(self, modconf)
 
-    # A service check have just arrived, we UPDATE data info with this
+    # A log brok has arrived, we UPDATE data info with this
     def manage_log_brok(self, b):
         data = b.data
         syslog.syslog(data['log'].encode('UTF-8'))
