@@ -1169,7 +1169,7 @@ class Snmp_poller(BaseModule):
             # if directory
             elif os.path.isdir(self.datasource_file):
                 files = glob.glob(os.path.join(self.datasource_file,
-                                               '/Default*.ini')
+                                               'Default*.ini')
                                  )
                 for f in files:
                     if self.datasource is None:
