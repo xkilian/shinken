@@ -1168,6 +1168,7 @@ class Snmp_poller(BaseModule):
 
             # if directory
             elif os.path.isdir(self.datasource_file):
+                logger.info("[SnmpBooster] Found a configuration directory, looking for Defaults files")
                 files = glob.glob(os.path.join(self.datasource_file,
                                                '/Default*.ini')
                                  )
@@ -1175,9 +1176,11 @@ class Snmp_poller(BaseModule):
                     if self.datasource is None:
                         self.datasource = ConfigObj(f,
                                                     interpolation='template')
+                        logger.info("[SnmpBooster] Found a configuration file, processing: %s"  % f)
                     else:
                         ctemp = ConfigObj(f, interpolation='template')
                         self.datasource.merge(ctemp)
+                        logger.info("[SnmpBooster] Found a configuration file, merging: %s"  % f)
             else:
                 raise IOError, "File or folder not found"
             # Store config in memcache
@@ -1239,7 +1242,7 @@ class Snmp_poller(BaseModule):
                 if host is None:
                     chk.status = 'done'
                     chk.exit_status = 2
-                    chk.get_outputs('Error : the parameters host or command are not correct.', 8012)
+                    chk.get_outputs('Error : the host or command parameters are not correct.', 8012)
                     chk.execution_time = 0.0
                     continue
 
@@ -1345,7 +1348,7 @@ class Snmp_poller(BaseModule):
                 timeout = 1.0
 
     def hook_get_new_actions(self, sche):
-        """ Detect of forced checks
+        """ Detection of forced checks
         """
         for s in sche.services:
             for a in s.actions:
@@ -1375,7 +1378,7 @@ class Snmp_poller(BaseModule):
                             # Host found
                             # try to find if this oid is already in memcache
                             if not s.check_interval in obj.frequences:
-                                logger.error("[SnmpBooster] check_interval not found in frequence list -"
+                                logger.error("[SnmpBooster] check_interval not found in frequences list -"
                                              "host: %s - check_interval: %s" % (obj_key, s.check_interval))
                                 # possible ??
                                 continue
@@ -1390,13 +1393,13 @@ class Snmp_poller(BaseModule):
 
                                 if forced:
                                     # Set forced
-                                    logger.info("[SnmpBooster] Forced check for this host/service: %s/%s" % (obj_key, s.service_description))
+                                    logger.info("[SnmpBooster] Forced a check for this host/service: %s/%s" % (obj_key, s.service_description))
                                     obj.frequences[s.check_interval].forced = forced
 
                             self.memcached.set(obj_key, obj, time=604800)
                         else:
                             # Host Not found
-                            logger.error("[SnmpBooster] Host not found: %s" % obj_key)
+                            logger.error("[SnmpBooster] Host not found in memcache: %s" % obj_key)
 
     def hook_late_configuration(self, arb):
         """ Read config and fill memcached
